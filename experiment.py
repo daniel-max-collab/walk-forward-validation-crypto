@@ -1,30 +1,9 @@
-import numpy as np
-import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, TimeSeriesSplit, cross_val_score
 
-HORIZON = 24  # predict direction 24 hours ahead
+from features import load_data, make_dataset
 
-df = pd.read_csv("btcusdt_1h.csv", parse_dates=["open_time"])
-df = df.sort_values("open_time").reset_index(drop=True)
-
-ret = df["close"].pct_change()
-X = pd.DataFrame({
-    "ret_1": ret,
-    "ret_3": df["close"].pct_change(3),
-    "ret_6": df["close"].pct_change(6),
-    "ret_24": df["close"].pct_change(24),
-    "vol_24": ret.rolling(24).std(),
-    "vol_ratio": df["volume"] / df["volume"].rolling(24).mean(),
-})
-
-future_ret = df["close"].shift(-HORIZON) / df["close"] - 1
-y = (future_ret > 0).astype(int)
-
-data = X.copy()
-data["y"] = y
-data = data[future_ret.notna()].dropna()
-X, y = data.drop(columns="y"), data["y"]
+X, y = make_dataset(load_data())
 
 print("rows used:", len(X))
 print("baseline (always guess the majority):", round(max(y.mean(), 1 - y.mean()), 3))
